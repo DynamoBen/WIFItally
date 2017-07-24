@@ -1,7 +1,7 @@
 # WIFI Tally Light 
 
 ## Description
-I was doing events that could benefit from some [tally lights]( https://en.wikipedia.org/wiki/Tally_light). But after researching my options I found that commercial systems were very expensive and didn't connect to the software I was using ([Wirecast]( https://www.telestream.net/wirecast/overview.htm)). So, I set out to build my own; initially I was going to build a wired system based on an [open source design by Skaarhoj]( http://skaarhoj.com/designs/tally-box-system). The problem was I didn't want to carry and run more cables. So instead I decided to design and build my own WIFI tally light system inspired by an [open source project I found](https://github.com/henne-/wifitally). Since I already use a private WIFI network for events I didn’t need to bring anything additional to run tally lights.
+I was doing events that could benefit from some [tally lights]( https://en.wikipedia.org/wiki/Tally_light). But after researching my options I found that commercial systems were very expensive and didn't connect to the software I was using ([Wirecast]( https://www.telestream.net/wirecast/overview.htm)). So, I set out to build my own. Initially I was going to build a wired system based on an [open source design by Skaarhoj]( http://skaarhoj.com/designs/tally-box-system), the problem was I didn't want to carry and run more cables. So instead I decided to design and build my own WIFI tally light system inspired by another [open source project I found](https://github.com/henne-/wifitally). Since I already use a private WIFI network for events I didn’t need to bring anything additional to run tally lights.
 
 My design allows for up to 255 tally lights (1-256). Each light has independently dimmable Tally and Operator light(s) and the operator sees both live and preview indicators. Each tally light is configurable via a webpage, allowing the user to change WIFI settings, the intensity of each LED, and upgrade firmware. Because this design uses WIFI it can be used internationally without any special licensing. 
 
@@ -15,11 +15,11 @@ One of the nicest parts of this design is the software bridge used to control th
 * Webpage configuration
 * Up to 256 Individually addressable lights
 * Upgradable firmware
-* Wirecast, vMix (Future), Blackmagic ATEM (additional hardware required)
+* Wirecast, vMix (Future), Blackmagic ATEM ([additional hardware required]( https://github.com/henne-/wifitally))
 
 ## Hardware
 ### Programming
-The initial programming of the tally light requires a USB to serial converter, after that new firmware can e uploaded via the web configuration. Initial programming is a two-part process: 
+The initial programming of the tally light requires a USB to serial converter, after that new firmware can be uploaded via the web configuration. Initial programming is a two-part process: 
 * Compile and Load the firmware via the Arduino IDE
 * Upload static files to flash (stored in SPIFFS)
 
@@ -34,7 +34,7 @@ To upload the static files via the Arduino IDE you will need this tool: https://
 4. Once connected open a browser and enter the following: http://192.168.4.1
 5. The device configuration page will load, now you can modify the configuration settings as needed.
 
-Once connected to the network the tally light can be reconfigured at any time. Open a browser and enter the devices name http://WIFITally_xxxxxx (the Xs represent the last 3 digits of the devices MAC address) or the IP address http://192.168.1.2
+Once connected to the network the tally light can be reconfigured at any time. Just open a browser and enter the devices name http://WIFITally_xxxxxx (the Xs represent the last 3 digits of the devices MAC address) or the IP address http://192.168.1.2
 
 NOTE: When you modify the SSID or Password the device will automatically reset.
 
@@ -54,33 +54,33 @@ EXAMPLE: If the device ID is set to 3 the sequence would be 0-0-3, 256 would be 
 ### Configuration Switch
 The configuration switch has two functions, activating the internal Access Point (AP) and restoring the default configuration. 
 
-**Active the Internal AP** - Press and hold the configuration switch until both the red and green operator LEDs turn on, then release. To deactivate the AP just power cycle the tally light. 
+**Activate the Internal AP** - Press and hold the configuration switch until both the red and green operator LEDs turn on, then release. To deactivate the AP just power cycle the tally light. 
 
 **Restore Default Configuration** - Press and hold the configuration switch then power on the tally light. Keep holding the switch until both the red and green operator LEDs turn on, then release. The configuration will be returned to defaults and activate the internal AP.
 
 ### Upgrade Firmware
-Open a browser and enter the devices name http://WIFITally_xxxxxx (the Xs represent the last 3 digits of the devices MAC address) or the IP address http://192.168.1.2 then click “Upgrade.” Browse to the binary file and click “UPDATE.” If successful a message will appear saying the tally light is rebooting and after ~30 seconds the page will return to the configuration settings.
+Open a browser and enter the devices name http://WIFITally_xxxxxx (the Xs represent the last 3 digits of the devices MAC address) or the IP address http://192.168.1.2 then click “Upgrade.” Browse to the binary file and click “UPDATE.” If successful a message will appear saying the tally light is rebooting and after ~30 seconds the page will refresh and return to the homepage.
 
 ## Software
 ### Installation
-The software is written in Python which needs to be installed prior to use. The preferred version is Python 3.x. Because this application uses COM to communicate with Wirecast additional modules will need to be installed. You can either use your preferred package manager and install them manually or install [ActivePython]( https://www.activestate.com/activepython/downloads) which includes all the necessary modules. 
+The software is written in Python, which needs to be installed prior to use. The preferred version is Python 3.x. Because this application uses COM to communicate with Wirecast additional modules will need to be installed. You can either use your preferred package manager and install them manually or install [ActivePython]( https://www.activestate.com/activepython/downloads) which includes all the necessary modules. 
 ### Launching Application
-You can launch the application by either double-clicking the script or running it from a command-line prompt (“python3 wcTallyBridge.py”). Wirecast monitors a single layer (3 by default) and changes the tally lights based on what is currently live or in preview. 
+You can launch the application by either double-clicking the script or running it from a command-line prompt (“python3 wcTallyBridge.py”). The software monitors a single layer in Wirecast (3 by default) and changes the tally lights based on what is currently live or in preview on that layer. 
 ### Mapping Lights to Shot
-To map a tally light to a shot you must add special characters to the shot name. You need add two brackets with a “T”, a colon, and the ID numbers of the tally lights you want to control. For multiple IDs each must be separate by a comma. 
+To map a tally light to a shot you must add special characters to the shot name. You need add two brackets, a “T”, a colon, and the ID numbers of the tally lights you want to control. For multiple IDs each must be separate by a comma. 
 
 So, for a single tally light you would add the following to the shot name [T:2] which would activate the tally light with an ID of 2. For a PIP shot [T:1,2] which would activate tally lights with an ID of 1 and 2. 
 
-### Configuration Options
-By default, the software will monitor layer 3, however you can change to a different layer (1-5) by using the “Set Layer” command-line option. 
+### Command-line Options
+By default, the software will monitor layer 3 in Wirecast, however you can change to a different layer (1-5) by using the “Set Layer” command-line option. 
 
 Below is a list of additional command-line options and examples of their use. 
 * **Set Layer:** -l [layer number] or --layer [layer number] (“wcTallyBridge.py -l 2”)
-* **Bind to adapter:** -b or –-bind  (“wcTallyBridge.py –bind”)
+* **Bind to Adapter:** -b or –-bind  (“wcTallyBridge.py –bind”)
 * **Help:** -h or -–help  (“wcTallyBridge.py -h”)
 
 ### Troubleshooting
-**Lights Not Responding** – This can occur when data is being sent to the wrong network adapter. The easiest way to resolve this is to disable all the adapters you aren’t using. Alternatively, you can try the “Bind to adapter” command-line option which will send data to the network card that is connected to the internet. 
+**Lights Not Responding** – This can occur when data is being sent to the wrong network adapter. The easiest way to resolve this is to disable all the network adapters you aren’t using. Alternatively, you can try the “Bind to Adapter” command-line option which will send data to the network card that is connected to the internet. 
 
 Another reason the lights might not respond is due to the network configuration. This software uses multicast to send data to the lights. Most routed networks block multicast data across subnets so you need to ensure that multicast is allowed on the network. A simple test is to connect the entire system to a private access point or router, if everything functions correctly multicast is likely blocked on your network.
 
