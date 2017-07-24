@@ -5,7 +5,7 @@ I was doing events that could benefit from some [tally lights]( https://en.wikip
 
 My design allows for up to 255 tally lights (1-256). Each light has independently dimmable Tally and Operator light(s) and the operator sees both live and preview indicators. Each tally light is configurable via a webpage, allowing the user to change WIFI settings, the intensity of each LED, and upgrade firmware. Because this design uses WIFI it can be used internationally without any special licensing. 
 
-One of the nicest parts of this design is the software bridge used to control them. It can control all the affected cameras for a given shot, even a PIP shot, and does so just by including special text in the shot name. 
+One of the nicest parts of this design is the software bridge used to control them. It can control all the affected cameras for a given shot even a PIP shot, and does so just by including special text in the shot name. 
 
 ### Features
 * Tally and Operator LEDs
@@ -19,9 +19,7 @@ One of the nicest parts of this design is the software bridge used to control th
 
 ## Hardware
 ### Programming
-The initial programming of the tally light requires a USB to serial converter, after that new firmware can be uploaded via the web configuration. 
-
-Initial programming is a two part process: 
+The initial programming of the tally light requires a USB to serial converter, after that new firmware can e uploaded via the web configuration. Initial programming is a two-part process: 
 * Compile and Load the firmware via the Arduino IDE
 * Upload static files to flash (stored in SPIFFS)
 
@@ -35,6 +33,8 @@ To upload the static files via the Arduino IDE you will need this tool: https://
 3. From a mobile device or laptop connect to the access point named WIFITally_xxxxxx (the Xs represent the last 3 digits of the devices MAC address).
 4. Once connected open a browser and enter the following: http://192.168.4.1
 5. The device configuration page will load, now you can modify the configuration settings as needed.
+
+Once connected to the network the tally light can be reconfigured at any time. Open a browser and enter the devices name http://WIFITally_xxxxxx (the Xs represent the last 3 digits of the devices MAC address) or the IP address http://192.168.1.2
 
 NOTE: When you modify the SSID or Password the device will automatically reset.
 
@@ -58,6 +58,9 @@ The configuration switch has two functions, activating the internal Access Point
 
 **Restore Default Configuration** - Press and hold the configuration switch then power on the tally light. Keep holding the switch until both the red and green operator LEDs turn on, then release. The configuration will be returned to defaults and activate the internal AP.
 
+### Upgrade Firmware
+Open a browser and enter the devices name http://WIFITally_xxxxxx (the Xs represent the last 3 digits of the devices MAC address) or the IP address http://192.168.1.2 then click “Upgrade.” Browse to the binary file and click “UPDATE.” If successful a message will appear saying the tally light is rebooting and after ~30 seconds the page will return to the configuration settings.
+
 ## Software
 ### Installation
 The software is written in Python which needs to be installed prior to use. The preferred version is Python 3.x. Because this application uses COM to communicate with Wirecast additional modules will need to be installed. You can either use your preferred package manager and install them manually or install [ActivePython]( https://www.activestate.com/activepython/downloads) which includes all the necessary modules. 
@@ -69,7 +72,7 @@ To map a tally light to a shot you must add special characters to the shot name.
 So, for a single tally light you would add the following to the shot name [T:2] which would activate the tally light with an ID of 2. For a PIP shot [T:1,2] which would activate tally lights with an ID of 1 and 2. 
 
 ### Configuration Options
-By default, the software will monitor layer 3, however you can change to a different layer (1-5) by using the “Set Layer” command line option. 
+By default, the software will monitor layer 3, however you can change to a different layer (1-5) by using the “Set Layer” command-line option. 
 
 Below is a list of additional command-line options and examples of their use. 
 * **Set Layer:** -l [layer number] or --layer [layer number] (“wcTallyBridge.py -l 2”)
@@ -91,4 +94,3 @@ The software is distributed in the hope that it will be useful, but WITHOUT ANY 
 Unless otherwise noted everything else (schematics, PCB designs, enclosure designs, documents, spreadsheets, etc.) is free and released under [Creative Commons BY-SA](http://creativecommons.org/licenses/by-sa/3.0/). 
 
 **IMPORTANT: If you want to use any of this in your own projects and/or products, please follow the license rules!**
-
