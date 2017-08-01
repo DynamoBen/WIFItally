@@ -77,6 +77,7 @@ So, for a single tally light you would add the following to the shot name [T:2] 
 
 ### Command-line Options
 **Wirecast**
+
 By default, the software will monitor layer 3 in Wirecast, however you can change to a different layer (1-5) by using the “Set Layer” command-line option. 
 
 Wirecast command-line options and examples of their use. 
@@ -86,6 +87,7 @@ Wirecast command-line options and examples of their use.
 
 
 **vMix**
+
 By default, the software will use a localhost IP of 127.0.0.1 and a Port of 8088. These are the defaults for vMix, however you can change to a remote IP or name allowing you to run this application on a separate machine.
 
 vMix command-line options and examples of their use. 
