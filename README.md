@@ -64,12 +64,9 @@ The configuration switch has two functions, activating the internal Access Point
 Open a browser and enter the devices name http://WIFITally_xxxxxx (the Xs represent the last 3 digits of the devices MAC address) or the IP address http://192.168.1.2 then click “Upgrade.” Browse to the binary file and click “UPDATE.” If successful a message will appear saying the tally light is rebooting and after ~30 seconds the page will refresh and return to the homepage.
 
 ## Software
-### Installation
-The software is written in Python, which needs to be installed prior to use. The preferred version is Python 3.x. 
-
-The Wirecast version of this application uses COM to communicate so additional modules will need to be installed. You can either use your preferred package manager and install them manually or install [ActivePython]( https://www.activestate.com/activepython/downloads) which includes all the necessary modules. 
 ### Launching Application
-You can launch the application by either double-clicking the script or running it from a command-line prompt (“python3 wcTallyBridge.py” or “python3 vmixTallyBridge.py”). For Wirecast the software monitors a single layer in Wirecast (3 by default) and changes the tally lights based on what is currently live or in preview on that layer. For vMix the software monitors input and overlay and changes the tally lights based on what is currently live or in preview.
+You can launch the bridge application by double-clicking the executable or running it from a command-line prompt ("wcTallyBridge.exe” or “vmixTallyBridge.exe”). For Wirecast the software monitors a single layer in Wirecast (3 by default) and changes the tally lights based on what is currently live or in preview on that layer. For vMix the software monitors both input and overlay and changes the tally lights based on what is currently live or in preview.
+
 ### Mapping Lights to Shot
 To map a tally light to a shot you must add special characters to the shot name. You need add two brackets, a “T”, a colon, and the ID numbers of the tally lights you want to control. For multiple IDs each must be separate by a comma. 
 
@@ -81,9 +78,9 @@ So, for a single tally light you would add the following to the shot name [T:2] 
 By default, the software will monitor layer 3 in Wirecast, however you can change to a different layer (1-5) by using the “Set Layer” command-line option. 
 
 Wirecast command-line options and examples of their use. 
-* **Set Layer:** -l [layer number] or --layer [layer number] (“wcTallyBridge.py -l 2”)
-* **Bind to Adapter:** -b or –-bind  (“wcTallyBridge.py –bind”)
-* **Help:** -h or -–help  (“wcTallyBridge.py -h”)
+* **Set Layer:** -l [layer number] or --layer [layer number] (“wcTallyBridge.exe -l 2”)
+* **Bind to Adapter:** -b or –-bind  (“wcTallyBridge.exe –bind”)
+* **Help:** -h or -–help  (“wcTallyBridge.exe -h”)
 
 
 **vMix**
@@ -91,16 +88,21 @@ Wirecast command-line options and examples of their use.
 By default, the software will use a localhost IP of 127.0.0.1 and a Port of 8088. These are the defaults for vMix, however you can change to a remote IP or name allowing you to run this application on a separate machine.
 
 vMix command-line options and examples of their use. 
-* **Set Address:** -a [IP or Computer Name] or --address [IP or Computer Name] (“vmixTallyBridge.py -a 192.168.1.2”)
-* **Port:** -p [Port Number] or --port [Port Number] (“vmixTallyBridge.py -p 8082”)
-* **Bind to Adapter:** -b or –-bind  (“wcTallyBridge.py –bind”)
-* **Help:** -h or -–help  (“vmixTallyBridge.py -h”)
+* **Set Address:** -a [IP or Computer Name] or --address [IP or Computer Name] (“vmixTallyBridge.exe -a 192.168.1.2”)
+* **Port:** -p [Port Number] or --port [Port Number] (“vmixTallyBridge.exe -p 8082”)
+* **Bind to Adapter:** -b or –-bind  (“wcTallyBridge.exe –bind”)
+* **Help:** -h or -–help  (“vmixTallyBridge.exe -h”)
 
 
 ### Troubleshooting
 **Lights Not Responding** – This can occur when data is being sent to the wrong network adapter. The easiest way to resolve this is to disable all the network adapters you aren’t using. Alternatively, you can try the “Bind to Adapter” command-line option which will send data to the network card that is connected to the internet. 
 
 Another reason the lights might not respond is due to the network configuration. This software uses multicast to send data to the lights. Most routed networks block multicast data across subnets so you need to ensure that multicast is allowed on the network. A simple test is to connect the entire system to a private access point or router, if everything functions correctly multicast is likely blocked on your network.
+
+
+## Development
+The software is written in Python 3.x. The Wirecast version of this application uses COM to communicate so additional modules will need to be installed. You can either use your preferred package manager and install them manually or install [ActivePython]( https://www.activestate.com/activepython/downloads) which includes all the necessary modules. 
+
 
 ## Licenses
 ### Software
