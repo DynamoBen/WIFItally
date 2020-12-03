@@ -30,12 +30,14 @@ please follow the license rules!
 #include "FS.h"                   // File System Access Library
 #include "StreamString.h"         // Used by HTTP OTA updates
 
-const char* DefaultSsid       = "WIFITally";  
-const char* DefaultPassword   = "wififtally1234";
+const char* DefaultSsid         = "WIFITally";  
+const char* DefaultPassword     = "wififtally1234";
+const char* DefaultvMixHostName = "vMixHostName";
 
 ESP8266WebServer httpServer(80);
 WiFiUDP udp; 
 IPAddress multicastAddress (224, 0, 0, 20);
+WiFiClient client;
 
 // Constants
   // -- GPIO --
@@ -48,15 +50,20 @@ const int BufferSize    = 512,      // Multicast data buffer max length
           WifiTimeout   = 30,       // Wait time for WIFI connect (seconds)
           SsidMaxLength = 32,       // Maximum size of a SSID
           PasswordMaxLength = 64,   // Length of passphrase. (Valid lengths are 8-63)
-          DevicenameMaxLength = 32; // Maximum size of Device Name     
-
+          DevicenameMaxLength = 32, // Maximum size of Device Name 
+          vMixHostnameMaxLength = 63; // Maximum size of vMix Hostname  
+            
 // Variables
 byte  lastTally       = -1,         // Stores state of last update
       tallyRedMax     = 100,        // Front LED max intensity Red (Default = 100%)
       operatorLedMax  = 100,        // Rear LED max intensity Red and Green (Default = 100%)
       operatorLedMin  = 0,          // Rear LED min intensity Red and Green (Default = 0%)
-      id              = 0;          // Device ID 0-255 (Default = 0)    
-long  lastPacket      = 0;          // Time since last Multicast packet
+      id              = 0,          // Device ID 0-255 (Default = 0)  
+      tallyProtocol   = 0;          // Receive Tally data via: 0 = Multicast, 1 = vMix TCP    
+long  lastPacket      = 0,          // Time since last Multicast packet
+      lastRetry       = 0,          // Time since last retry
+      vMixRetry       = 5000,       // Retry interval for vMix
+      dataTimeout     = 3000;       // Timeout for loss of UDP data   
 bool  apEnabled       = false;      // User configuring device via AP
 
 char  ssid[SsidMaxLength];
@@ -66,66 +73,93 @@ byte  packetBuffer[BufferSize];         // Multicast data buffer
 
 String _updaterError  = "";             // Firmware update error string buffer
 
+// vMix Specific Settings
+int   vMixPort;                             // Configurable Port number (default = 8099)
+char  vMixHostName[vMixHostnameMaxLength];  // Hostname of the PC running vMix
+
 // ===== SETUP FUNCTIONS =====
 
 // ----- EEProm Read/Write -----
 void writeConfig() {     
-  long ptr = 0;                                           // Clear EEProm Pointer; used to write consecutively  
+  long ptr = 0;                                     // Clear EEProm Pointer; used to write consecutively  
  
-  for (int i = 0; i < 512; i++)                           // Clear EEProm data (Write a 0 to all 512 bytes of the EEPROM)
+  for (int i = 0; i < 512; i++)                     // Clear EEProm data (Write a 0 to all 512 bytes of the EEPROM)
     EEPROM.write(i, 0);
       
-  for (int i = 0; i < SsidMaxLength; i++) {               // AP SSID write
+  for (int i = 0; i < SsidMaxLength; i++) {         // AP SSID 
     EEPROM.write(ptr, ssid[i]);
-    ptr++;                                                // Increment EEProm Pointer
+    ptr++;                                          // Increment EEProm Pointer
   }
 
-  for (int i = 0; i < PasswordMaxLength; i++) {           // AP Password write
+  for (int i = 0; i < PasswordMaxLength; i++) {     // AP Password 
     EEPROM.write(ptr, passphrase[i]);
     ptr++;                                       
   }   
       
-  EEPROM.write(ptr, id);                                  // Tally ID
+  EEPROM.write(ptr, id);                            // Tally ID
   ptr++;                                        
         
-  EEPROM.write(ptr, tallyRedMax);                         // Talent LED Intensity
+  EEPROM.write(ptr, tallyRedMax);                   // Talent LED Intensity
   ptr++;                                          
   
-  EEPROM.write(ptr, operatorLedMax);                      // Operator LED Intensity
+  EEPROM.write(ptr, operatorLedMax);                // Operator LED Intensity
   ptr++;
 
+  for (int i = 0; i < vMixHostnameMaxLength; i++) { // vMix Hostname 
+    EEPROM.write(ptr, vMixHostName[i]);
+    ptr++;                                       
+  }
+
+  EEPROM.write(ptr, highByte(vMixPort));             // vMix Port 
+  ptr++;
+  EEPROM.write(ptr, lowByte(vMixPort ));
+  ptr++;  
+
+  EEPROM.write(ptr, tallyProtocol);                 // Tally Protocol
+  ptr++;
+     
   // Calculate EEProm CRC16
   long checksum = eeprom_crc(ptr);                        
-  EEPROM.write(ptr, (checksum & 0xFF));                   // Write long (4 bytes) into the eeprom memory.
+  EEPROM.write(ptr, (checksum & 0xFF));             // Write long (4 bytes) into the eeprom memory.
   EEPROM.write(ptr + 1, ((checksum >> 8) & 0xFF));
   EEPROM.write(ptr + 2, ((checksum >> 16) & 0xFF));
   EEPROM.write(ptr + 3, ((checksum >> 24) & 0xFF));
 
-  EEPROM.commit();                                        // Write EEProm data
+  EEPROM.commit();                                  // Write EEProm data
 }
 
 void readConfig() {
-  long ptr = 0;                                           // Clear EEProm Pointer; used to read consecutively 
+  long ptr = 0;                                     // Clear EEProm Pointer; used to read consecutively 
   
-  for (int i = ptr; i < SsidMaxLength; i++) {             // AP SSID read
+  for (int i = ptr; i < SsidMaxLength; i++) {       // AP SSID read
     ssid[i] = EEPROM.read(ptr);
-    ptr++;                                                // Increment EEProm Pointer
+    ptr++;                                          // Increment EEProm Pointer
   }
   
-  for (int i = 0; i <  PasswordMaxLength; i++) {          // AP Password
+  for (int i = 0; i <  PasswordMaxLength; i++) {    // AP Password
     passphrase[i] = EEPROM.read(ptr);
     ptr++;                                                  
   }
   
-  id = EEPROM.read(ptr);                                  // Tally ID
+  id = EEPROM.read(ptr);                            // Tally ID
   ptr++;                                                   
   
-  tallyRedMax = EEPROM.read(ptr);                         // Talent LED Intensity
+  tallyRedMax = EEPROM.read(ptr);                   // Talent LED Intensity
   ptr++;                                                    
  
-  operatorLedMax = EEPROM.read(ptr);                      // Operator LED Intensity
+  operatorLedMax = EEPROM.read(ptr);                // Operator LED Intensity
   ptr++;  
 
+  for (int i = 0; i <  vMixHostnameMaxLength; i++) {  // vMix Hostname 
+    vMixHostName[i] = EEPROM.read(ptr);
+    ptr++;                                                  
+  }
+
+  vMixPort = word(EEPROM.read(ptr++), EEPROM.read(ptr++));  // vMix Port
+
+  tallyProtocol = EEPROM.read(ptr);                   // Tally Protocol
+  ptr++;
+  
   // Calculate EEProm CRC16
   long checksum = eeprom_crc(ptr);                                              
   long calc_chksum = (EEPROM.read(ptr) << 0) & 0xFF;      // Read 4 bytes (Long) from the eeprom memory and recomposed long by using bitshifting
@@ -156,8 +190,14 @@ unsigned long eeprom_crc(int len) {                       // Calculate EEPROM CR
 }
 
 void defaultConfig() {   
-  generateDevicename(); 
-
+  generateDevicename();
+  
+  id = 0;
+  tallyRedMax = 100;
+  operatorLedMax = 100; 
+  vMixPort = 8099;
+  tallyProtocol = 0;
+  
   for (int i = 0;  i< SsidMaxLength; i++){
     ssid[i] = DefaultSsid[i];
   }  
@@ -166,9 +206,9 @@ void defaultConfig() {
     passphrase[i] = DefaultPassword[i];
   }  
 
-  id = 0;
-  tallyRedMax = 100;
-  operatorLedMax = 100;  
+  for (int i = 0;  i< vMixHostnameMaxLength; i++){
+    vMixHostName[i] = DefaultvMixHostName[i];
+  }  
 
   writeConfig(); 
 }
@@ -181,7 +221,7 @@ void generateDevicename() {
 // ===== Network Comms & LED Control =====
 
 // ----- Read Multicast Packet -----
-void readData(int pcktSize) {
+void readMulticastData(int pcktSize) {
   if (pcktSize < 1) {                   // Packet has no data
     return; 
   }  
@@ -204,6 +244,22 @@ void readData(int pcktSize) {
 long noDataSince() {                    // Calculate the amount of time since last data was received
   long now = millis();
   return (now - lastPacket);
+}
+
+// ----- Read vMix Tally Packet -----
+void readvMixData(String data)
+{
+  // Check if server data is tally data
+  if (data.indexOf("TALLY") == 0) {
+    int tallyState = (data.charAt((data.indexOf("OK") + 3) + id) - 48);  // Convert target tally state value (by device ID) to int
+    
+    if (tallyState == 1) live();          // In Live
+    else if (tallyState == 2) preview();  // In Preview
+    else off();                           // NOT in Preview or Live       
+  } else {
+    Serial.print("vMix Response: ");
+    Serial.println(data);
+  }
 }
 
 // ----- LED Control -----
@@ -279,6 +335,32 @@ void deviceID() {
   delay(1500);
 }
 
+// ----- vMix Connect -----
+void vMixConnect() {    
+  Serial.print("Connecting to vMix host: ");
+  Serial.println(vMixHostName);
+  
+  if (client.connect(vMixHostName, vMixPort))
+  {
+    Serial.println("Connected!");
+
+    // Subscribe to the tally events
+    client.print("SUBSCRIBE TALLY\r\n");
+    Serial.println("Subscribe to Tally");
+  }
+  else
+  {
+    lastRetry = millis();                             // Remember current (relative) time in msecs.
+    Serial.println("FAILED!");
+  }
+}
+
+// ----- vMix Reconnect Retry -----
+long sinceRetry() {                                 // Calculate the amount of time since last data was received
+  long now = millis();
+  return (now - lastRetry);
+}
+
 // ----- WIFI Client Connect -----
 void wifiConnect() {
   int timeout = WifiTimeout;                        // Set WIFI connect retried
@@ -315,7 +397,7 @@ void wifiConnect() {
     Serial.println(WiFi.localIP());
   } else {                                            // Didn't connect, print out failure message (might be good to blink out error?)
     if (WiFi.status() == WL_IDLE_STATUS) Serial.println("Idle");    
-    else if(WiFi.status() == WL_NO_SSID_AVAIL) Serial.println("No SSID Available"); 
+    else if(WiFi.status() == WL_NO_SSID_AVAIL) Serial.println("SSID Unavailable"); 
     else if(WiFi.status() == WL_SCAN_COMPLETED) Serial.println("Scan Completed"); 
     else if(WiFi.status() == WL_CONNECT_FAILED) Serial.println("Connection Failed"); 
     else if(WiFi.status() == WL_CONNECTION_LOST) Serial.println("Connection Lost"); 
@@ -362,7 +444,21 @@ void rootPageHandler() {
   response_message += "<p>Tally Intensity (0-100%):<br>";
   response_message += "<input type='text' size='3' maxlength='3' name='frontLED' value='" + String(tallyRedMax) + "'></p>";  
   response_message += "<p>Operator Intensity (0-100%):<br>";
-  response_message += "<input type='text' size='3' maxlength='3' name='rearLED' value='" + String(operatorLedMax) + "'></p>";    
+  response_message += "<input type='text' size='3' maxlength='3' name='rearLED' value='" + String(operatorLedMax) + "'></p>";   
+
+  response_message += "<fieldset data-role='controlgroup' />";
+  response_message += "<legend>Protocol:</legend>";
+  response_message += "<input type='radio' id='radio0' name='protocol-radio-choice-0' value='protocol-choice-0'/>";
+  response_message += "<label for='radio0'>Multicast</label>";
+  response_message += "<input type='radio' id='radio1' name='protocol-radio-choice-0' value='protocol-choice-1'/>";
+  response_message += "<label for='radio1'>vMix TCP</label>";
+  response_message += "</fieldset></p>";
+  
+  response_message += "<p>vMix Hostname:<br>";
+  response_message += "<input type='text' size='63' maxlength='63' name='vMixHostName' value='" + String(vMixHostName) + "'></p>";
+  response_message += "<p>vMix Port:<br>";
+  response_message += "<input type='text' size='4' maxlength='4' name='vMixPort' value='" + String(vMixPort) + "'></p>";
+   
   response_message += "<input type='submit' value='SAVE' class='btn'></form>"; 
   
   sendWebpage(response_message, "Settings");
@@ -404,7 +500,38 @@ void handleSave() {
       operatorLedMax = httpServer.arg("rearLED").toInt();  
     }  
 
-    lastTally = -1;
+    if (httpServer.arg("protocol-radio-choice-0")) {
+      if (httpServer.arg("protocol-radio-choice-0") == "protocol-choice-0") {        
+        if (tallyProtocol != 0) {
+          tallyProtocol = 0;
+          restart = true; 
+        }
+      }
+      if (httpServer.arg("protocol-radio-choice-0") == "protocol-choice-1") {
+          if (tallyProtocol != 1) {
+            tallyProtocol = 1;
+            restart = true; 
+          }   
+      }
+    }    
+
+    if (httpServer.hasArg("vMixHostName")) { 
+      if (httpServer.arg("vMixHostName").length() <= vMixHostnameMaxLength) {
+        if (httpServer.arg("vMixHostName") != vMixHostName) {
+          httpServer.arg("vMixHostName").toCharArray(vMixHostName, vMixHostnameMaxLength);
+          restart = true; 
+        }             
+      }
+    }    
+
+    if (httpServer.hasArg("vMixPort")){
+      if (httpServer.arg("vMixPort").toInt() != vMixPort) {
+        vMixPort = httpServer.arg("vMixPort").toInt(); 
+        restart = true; 
+      } 
+    }  
+    
+    lastTally = -1;    
     writeConfig();  
     
     if (restart == true) {                        // Set when WIFI settings are changed (SSID and/or Password)
@@ -438,7 +565,8 @@ void updatePostHandler() {
   response_message += "<link rel='icon' type='image/x-icon' href='favicon.ico'>";  
   response_message += "<link rel='stylesheet' href='jquery.mobile-1.4.5.min.css'>";   
   response_message += "<script src='jquery-1.12.4.min.js'></script>";  
-  response_message += "<script src='jquery.mobile-1.4.5.min.js'></script>";    
+  response_message += "<script src='jquery.mobile-1.4.5.min.js'></script>";   
+   
   response_message += "<style>h3, h4 {text-align: center;}span {font-weight: bold;}</style>";
   response_message += "</head>";  
   
@@ -521,6 +649,12 @@ void sendWebpage(String body, String PageName) {
   response_message += "<link rel='stylesheet' href='jquery.mobile-1.4.5.min.css'>";   
   response_message += "<script src='jquery-1.12.4.min.js'></script>";  
   response_message += "<script src='jquery.mobile-1.4.5.min.js'></script>";    
+
+  response_message += "<script type='text/javascript'>";
+  response_message += "$(document).ready(function(){";
+  response_message += "$('input:radio[name=protocol-radio-choice-0]:nth(" + String(tallyProtocol) + ")').attr('checked',true).checkboxradio('refresh');});";
+  response_message += "</script>";
+
   response_message += "<style>h3, h4 {text-align: center;}span {font-weight: bold;}</style>";
   response_message += "</head>";  
   
@@ -638,7 +772,7 @@ void setup(void) {
   Serial.println();
   
   // EEProm and File System (flash)
-  EEPROM.begin(512);
+  EEPROM.begin(1024);
   SPIFFS.begin();
 
   // Configuration
@@ -646,6 +780,7 @@ void setup(void) {
   readConfig();                           // Read configuration settings from EEProm    
 
   // Reset to Default Config
+  
   // If button pressed > 10 secs the default config is written...
   //...and the device goes into AP mode for configuration. 
   if(digitalRead(CnfgBtn) == LOW) {
@@ -669,9 +804,13 @@ void setup(void) {
     wifiConnect();                        // Connect to AP as client   
   }
 
-  // Multicast
-  udp.beginMulticast(WiFi.localIP(), multicastAddress, 3000); 
-  Serial.println("Multicast: Started");                     
+  // Tally Protocol
+  if (tallyProtocol == 0) {               // Multicast
+    udp.beginMulticast(WiFi.localIP(), multicastAddress, 3000); 
+    Serial.println("Multicast: Started");  
+  } else if (tallyProtocol == 1) {        // vMix TCP
+    vMixConnect();
+  }  
 
   // Webpage handler functions
   httpServer.on("/", HTTP_GET, rootPageHandler);
@@ -687,17 +826,37 @@ void setup(void) {
   MDNS.addService("http", "tcp", 80);   
   Serial.printf("Webserver ready: http://%s \n", deviceName);
 }
+
 // ========= MAIN LOOP =========
-void loop(void) {
+void loop(void) {  
   httpServer.handleClient();                                    // Webserver processing
 
   // WIFI connectivity and data processing 
   if (WiFi.status() == WL_CONNECTED and apEnabled == false) {   // If connected to Access Point and not in AP mode...
     operatorLedMin = 10;                                        // ...glow operator LEDs.
 
-    int pcktSize = udp.parsePacket();                           // Get multicast packet size
-    if(pcktSize) readData(pcktSize);                            // If more than one byte received, process multicast packet.   
-      
+    // == Multicast ==
+    if (tallyProtocol == 0) {
+      int pcktSize = udp.parsePacket();                         // Get multicast packet size
+      if(pcktSize) readMulticastData(pcktSize);                 // If more than one byte received, process multicast packet.   
+
+      // Loss of multicast data timeout
+      if (noDataSince() > dataTimeout) off();                   // Turn off Tally LEDs if data is lost.               
+    }
+
+    // == vMix ==
+    if (tallyProtocol == 1){
+      if (client.connected()) {
+        if (client.available()) {
+          String data = client.readStringUntil('\n');
+          readvMixData(data);
+        } 
+      } else {
+        off();                                                  // Turn off Tally LEDs if connection is lost...  
+        if (sinceRetry()> vMixRetry) vMixConnect();             // ...try to reconnect.
+      }
+    }
+     
   } else if (apEnabled == true) {                               // In AP Mode...
     operatorLedMin = 100;                                       // ...operator LEDs on @ Full to indicate AP Mode   
     off();  
@@ -705,13 +864,10 @@ void loop(void) {
   } else {                                                      // Loss of WIFI connection...
     operatorLedMin = 0;                                         // ...operator and tally LEDs off.           
     off();                             
-  }
-
-  // Loss of data timeout
-  if (noDataSince() > 3000) off();                              // Turn off Tally LEDs if data is lost.          
+  }      
                                    
   // Switch to AP mode  
-  if (digitalRead(CnfgBtn) == LOW and apEnabled == false) {      // If button is pressed and not already in AP Mode
+  if (digitalRead(CnfgBtn) == LOW and apEnabled == false) {     // If button is pressed and not already in AP Mode
     unsigned long now = millis();
     while(digitalRead(CnfgBtn) == LOW) {
       unsigned long switchDuration = millis() - now;
@@ -721,9 +877,5 @@ void loop(void) {
         break;                          
       }
     }
-  } 
-  
-}   
-
-
-
+  }  
+}
