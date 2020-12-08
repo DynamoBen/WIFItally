@@ -17,7 +17,7 @@ One of the nicest parts of this design is the software bridge used to control th
 * Upgradable firmware
 * Wirecast, vMix, Blackmagic ATEM ([additional hardware required]( https://github.com/henne-/wifitally))
 
-## WIKI
+## Build this project
 [Check out the wiki for more information](https://github.com/DynamoBen/WIFItally/wiki)
 
 ## Licenses
