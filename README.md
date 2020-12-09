@@ -1,11 +1,9 @@
 # WIFI Tally Light 
 
 ## Description
-I was doing events that could benefit from some [tally lights]( https://en.wikipedia.org/wiki/Tally_light). But after researching my options I found that commercial systems were very expensive and didn't connect to the software I was using ([Wirecast]( https://www.telestream.net/wirecast/overview.htm)). So, I set out to build my own. Initially I was going to build a wired system based on an [open source design by Skaarhoj]( http://skaarhoj.com/designs/tally-box-system), the problem was I didn't want to carry and run more cables. So instead I decided to design and build my own WIFI tally light system inspired by another [open source project I found](https://github.com/henne-/wifitally). Since I already use a private WIFI network for events I didn’t need to bring anything additional to run tally lights.
+An inexpensive tally light system that works with [Wirecast]( https://www.telestream.net/wirecast/overview.htm), [vMix](https://www.vmix.com/), [Blackmagic ATEM](https://www.blackmagicdesign.com). 
 
-My design allows for up to 256 tally lights (1-256). Each light has independently dimmable Tally and Operator light(s) and the operator sees both live and preview indicators. Each tally light is configurable via a webpage, allowing the user to change WIFI settings, the intensity of each LED, and upgrade firmware. Because this design uses WIFI it can be used internationally without any special licensing. 
-
-One of the nicest parts of this design is the software bridge used to control them. It can control all the affected cameras for a given shot, even a PIP shot, and does so just by including special text in the shot name. 
+This design allows for up to 256 tally lights (1-256). Each light has independently dimmable Tally and Operator light(s) and the operator sees both live and preview indicators. Each tally light is configurable via a webpage, allowing the user to change WIFI settings, the intensity of each LED, and upgrade firmware.
 
 ### Features
 * Tally and Operator LEDs
