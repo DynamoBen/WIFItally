@@ -1,7 +1,7 @@
 # WIFI Tally Light 
 
 ## Description
-An inexpensive tally light system that works with [Wirecast]( https://www.telestream.net/wirecast/overview.htm), [vMix](https://www.vmix.com/), [Blackmagic ATEM](https://www.blackmagicdesign.com). 
+An inexpensive WIFI tally light system based on the ESP8266 and works with [Wirecast]( https://www.telestream.net/wirecast/overview.htm), [vMix](https://www.vmix.com/), [Blackmagic ATEM](https://www.blackmagicdesign.com). 
 
 This design allows for up to 256 tally lights (1-256). Each light has independently dimmable Tally and Operator light(s) and the operator sees both live and preview indicators. Each tally light is configurable via a webpage, allowing the user to change WIFI settings, the intensity of each LED, and upgrade firmware.
 
