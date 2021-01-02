@@ -15,16 +15,5 @@ This design allows for up to 256 tally lights (1-256). Each light has independen
 * Upgradable firmware
 * Wirecast, vMix, Blackmagic ATEM ([additional hardware required]( https://github.com/henne-/wifitally))
 
-## Build this project
+## Learn More
 [Check out the wiki for more information](https://github.com/DynamoBen/WIFItally/wiki)
-
-## Licenses
-### Software
-This software is free so you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
-
-The software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [GNU General Public License]( http://www.gnu.org/licenses) for more details. 
-
-### Everything else
-Unless otherwise noted everything else (schematics, PCB designs, enclosure designs, documents, spreadsheets, etc.) is free and released under [Creative Commons BY-SA](http://creativecommons.org/licenses/by-sa/3.0/). 
-
-**IMPORTANT: If you want to use any of this in your own projects and/or products, please follow the license rules!**
