@@ -261,7 +261,7 @@ void readvMixData(String data)
     Serial.println(data);
   }
 }
-
+#define PWMRANGE 255
 // ----- LED Control -----
 int dimCurve(int val) {                 // LED Dimmer Curve (makes 25% look visually like 25%)
   int R = (100 * log10(2))/(log10(PWMRANGE));
